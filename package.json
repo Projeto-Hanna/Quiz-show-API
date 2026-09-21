@@ -3,7 +3,7 @@
   "private": true,
   "author": "Projeto Hanna",
   "version": "1.0.0",
-  "description": "",
+  "description": "API backend para hospedagem de partidas multiplayer da nossa aplicação Quiz Show Electron-Vite",
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
