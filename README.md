@@ -1,4 +1,4 @@
-# 🎮 Quiz Show Server (API)
+# Quiz Show - Servidor API
 
 Backend em Node.js com Express e Socket.IO responsável pela gestão de partidas, salas e pontuação multiplayer em tempo real do [Quiz Show](https://github.com/Projeto-Hanna/Quiz-show-electron).
 
