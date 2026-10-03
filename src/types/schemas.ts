@@ -32,7 +32,7 @@ export const CreateRoomSchema = z.object({
     .array(QuestionSchema)
     .min(1, 'É necessário fornecer pelo menos 1 pergunta.')
     .max(100, 'O número máximo permitido de perguntas por partida é 100.'),
-  timePerQuestion: z.number().int().min(5).max(60).optional().default(15),
+  timePerQuestion: z.number().int().min(10).max(300).optional().default(15),
 });
 
 export type ValidatedQuestion = z.infer<typeof QuestionSchema>;
