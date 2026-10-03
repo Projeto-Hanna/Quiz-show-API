@@ -23,6 +23,7 @@ export class GameRoom {
   public status: RoomStatus;
   public currentQuestionIndex: number;
   public questionStartedAt: number;
+  public finishedAt: number;
   public readonly players: Map<string, Player>;
 
   constructor(
@@ -40,6 +41,7 @@ export class GameRoom {
     this.status = 'LOBBY';
     this.currentQuestionIndex = 0;
     this.questionStartedAt = 0;
+    this.finishedAt = 0;
     this.players = new Map<string, Player>();
   }
 
@@ -282,6 +284,7 @@ export class GameRoom {
 
   public finishGame(): ScoreboardItem[] {
     this.status = 'FINISHED';
+    this.finishedAt = Date.now();
     return this.getScoreboard();
   }
 

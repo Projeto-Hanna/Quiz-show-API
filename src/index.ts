@@ -4,17 +4,23 @@ import { clearRoomDisconnectTimers } from './utils/roomUtils.js';
 
 const PORT = process.env.PORT || 3001;
 const ROOM_MAX_INACTIVE_MS = 60 * 60 * 1000;
+const ROOM_FINISHED_MAX_INACTIVE_MS = 60 * 1000;
 
 // Periodic cleanup of abandoned/finished rooms (every 1 minute)
 setInterval(() => {
   const now = Date.now();
   for (const [roomId, room] of rooms.entries()) {
-    const isFinished = room.status === 'FINISHED';
+    const isFinishedAndExpired =
+      room.status === 'FINISHED' &&
+      room.finishedAt > 0 &&
+      now - room.finishedAt > ROOM_FINISHED_MAX_INACTIVE_MS;
+      
     const isAbandoned =
+      room.status !== 'FINISHED' &&
       room.questionStartedAt > 0 &&
       now - room.questionStartedAt > ROOM_MAX_INACTIVE_MS;
 
-    if (isFinished || isAbandoned) {
+    if (isFinishedAndExpired || isAbandoned) {
       clearRoomDisconnectTimers(room);
       for (const playerSocketId of room.players.keys()) {
         socketToRoom.delete(playerSocketId);
