@@ -24,6 +24,7 @@ export class GameRoom {
   public currentQuestionIndex: number;
   public questionStartedAt: number;
   public finishedAt: number;
+  public createdAt: number;
   public readonly players: Map<string, Player>;
 
   constructor(
@@ -42,6 +43,7 @@ export class GameRoom {
     this.currentQuestionIndex = 0;
     this.questionStartedAt = 0;
     this.finishedAt = 0;
+    this.createdAt = Date.now();
     this.players = new Map<string, Player>();
   }
 

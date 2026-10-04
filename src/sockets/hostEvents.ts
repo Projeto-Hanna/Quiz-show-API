@@ -5,7 +5,7 @@ import type {
   ClientToServerEvents,
   ServerToClientEvents,
 } from '../types/game.js';
-import { rooms, socketToRoom, hostDisconnectTimers } from '../state.js';
+import { rooms, hostDisconnectTimers, addSocketRoom, removeSocketRoom } from '../state.js';
 import {
   generateRoomCode,
   clearRoomDisconnectTimers,
@@ -38,7 +38,7 @@ export function registerHostEvents(
         validation.data.timePerQuestion,
       );
       rooms.set(roomId, room);
-      socketToRoom.set(socket.id, roomId);
+      addSocketRoom(socket.id, roomId);
 
       socket.join(`room_${roomId}`);
 
@@ -70,7 +70,7 @@ export function registerHostEvents(
         hostDisconnectTimers.delete(roomId);
       }
 
-      socketToRoom.set(socket.id, roomId);
+      addSocketRoom(socket.id, roomId);
       socket.join(`room_${roomId}`);
 
       callback?.({
@@ -218,10 +218,10 @@ export function registerHostEvents(
       reason: 'A sala foi cancelada pelo Host.',
     });
     for (const playerSocketId of room.players.keys()) {
-      socketToRoom.delete(playerSocketId);
+      removeSocketRoom(playerSocketId, roomId);
     }
     rooms.delete(roomId);
-    socketToRoom.delete(socket.id);
+    removeSocketRoom(socket.id, roomId);
     socket.leave(`room_${roomId}`);
 
     callback?.({ success: true });

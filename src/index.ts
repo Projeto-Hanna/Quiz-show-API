@@ -1,5 +1,5 @@
 import { server, io } from './server.js';
-import { rooms, socketToRoom } from './state.js';
+import { rooms, removeSocketRoom } from './state.js';
 import { clearRoomDisconnectTimers } from './utils/roomUtils.js';
 
 const PORT = process.env.PORT || 3001;
@@ -14,18 +14,24 @@ setInterval(() => {
       room.status === 'FINISHED' &&
       room.finishedAt > 0 &&
       now - room.finishedAt > ROOM_FINISHED_MAX_INACTIVE_MS;
-      
+
+    const isLobbyAbandoned =
+      room.status === 'LOBBY' &&
+      room.createdAt > 0 &&
+      now - room.createdAt > ROOM_MAX_INACTIVE_MS;
+
     const isAbandoned =
       room.status !== 'FINISHED' &&
+      room.status !== 'LOBBY' &&
       room.questionStartedAt > 0 &&
       now - room.questionStartedAt > ROOM_MAX_INACTIVE_MS;
 
-    if (isFinishedAndExpired || isAbandoned) {
+    if (isFinishedAndExpired || isAbandoned || isLobbyAbandoned) {
       clearRoomDisconnectTimers(room);
       for (const playerSocketId of room.players.keys()) {
-        socketToRoom.delete(playerSocketId);
+        removeSocketRoom(playerSocketId, roomId);
       }
-      socketToRoom.delete(room.hostSocketId);
+      removeSocketRoom(room.hostSocketId, roomId);
       io.to(`room_${roomId}`).emit('room:closed', {
         reason: 'A sala foi encerrada por inatividade.',
       });

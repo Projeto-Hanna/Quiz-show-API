@@ -3,7 +3,7 @@ import type {
   ClientToServerEvents,
   ServerToClientEvents,
 } from '../types/game.js';
-import { rooms, socketToRoom, disconnectTimers } from '../state.js';
+import { rooms, disconnectTimers, addSocketRoom, removeSocketRoom } from '../state.js';
 
 export function registerPlayerEvents(
   io: Server<ClientToServerEvents, ServerToClientEvents>,
@@ -34,7 +34,7 @@ export function registerPlayerEvents(
             }
 
             if (existing.socketId) {
-              socketToRoom.delete(existing.socketId);
+              removeSocketRoom(existing.socketId, normalizedRoomId);
             }
 
             const reconnectedPlayer = room.reconnectPlayer(
@@ -42,7 +42,7 @@ export function registerPlayerEvents(
               playerToken,
             );
             if (reconnectedPlayer) {
-              socketToRoom.set(socket.id, normalizedRoomId);
+              addSocketRoom(socket.id, normalizedRoomId);
               socket.join(`room_${normalizedRoomId}`);
 
               callback?.({
@@ -67,7 +67,7 @@ export function registerPlayerEvents(
         }
 
         const player = room.addPlayer(socket.id, playerName);
-        socketToRoom.set(socket.id, normalizedRoomId);
+        addSocketRoom(socket.id, normalizedRoomId);
         socket.join(`room_${normalizedRoomId}`);
 
         const publicPlayer = { ...player };

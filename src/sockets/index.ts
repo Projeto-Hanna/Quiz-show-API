@@ -36,68 +36,73 @@ export function registerSocketHandlers(
     registerPlayerEvents(io, socket);
 
     socket.on('disconnect', () => {
-      const roomId = socketToRoom.get(socket.id);
-      if (!roomId) return;
+      const roomIds = socketToRoom.get(socket.id);
+      if (!roomIds) return;
 
       socketToRoom.delete(socket.id);
-      const room = rooms.get(roomId);
-      if (!room) return;
 
-      if (socket.id === room.hostSocketId) {
-        const existingHostTimer = hostDisconnectTimers.get(roomId);
-        if (existingHostTimer) {
-          clearTimeout(existingHostTimer);
+      for (const roomId of roomIds) {
+        const room = rooms.get(roomId);
+        if (!room) continue;
+
+        if (socket.id === room.hostSocketId) {
+          const existingHostTimer = hostDisconnectTimers.get(roomId);
+          if (existingHostTimer) {
+            clearTimeout(existingHostTimer);
+          }
+
+          const hostTimer = setTimeout(() => {
+            hostDisconnectTimers.delete(roomId);
+            if (!rooms.has(roomId)) return;
+
+            if (room.hostSocketId === socket.id) {
+              clearRoomDisconnectTimers(room);
+              if (room.status !== 'FINISHED') {
+                io.to(`room_${roomId}`).emit('room:closed', {
+                  reason: 'O Host encerrou ou perdeu a conexão com a sala.',
+                });
+              }
+              rooms.delete(roomId);
+            }
+          }, 25000);
+
+          hostDisconnectTimers.set(roomId, hostTimer);
+          continue;
         }
 
-        const hostTimer = setTimeout(() => {
-          hostDisconnectTimers.delete(roomId);
+        const player = room.players.get(socket.id);
+        if (!player) continue;
+
+        const playerId = player.id;
+        const disconnectedSocketId = socket.id;
+
+        const existingTimer = disconnectTimers.get(playerId);
+        if (existingTimer) {
+          clearTimeout(existingTimer);
+        }
+
+        const timer = setTimeout(() => {
+          disconnectTimers.delete(playerId);
+
           if (!rooms.has(roomId)) return;
 
-          if (room.hostSocketId === socket.id) {
-            clearRoomDisconnectTimers(room);
-            io.to(`room_${roomId}`).emit('room:closed', {
-              reason: 'O Host encerrou ou perdeu a conexão com a sala.',
-            });
-            rooms.delete(roomId);
+          const currentSocketId = room.getSocketIdByPlayerId(playerId);
+          if (currentSocketId === disconnectedSocketId) {
+            const { removedPlayer } = room.removeUser(disconnectedSocketId);
+            if (removedPlayer) {
+              io.to(`room_${roomId}`).emit('room:player_left', {
+                player: {
+                  ...removedPlayer,
+                  playerToken: undefined,
+                },
+                summary: room.getLobbySummary(),
+              });
+            }
           }
         }, 25000);
 
-        hostDisconnectTimers.set(roomId, hostTimer);
-        return;
+        disconnectTimers.set(playerId, timer);
       }
-
-      const player = room.players.get(socket.id);
-      if (!player) return;
-
-      const playerId = player.id;
-      const disconnectedSocketId = socket.id;
-
-      const existingTimer = disconnectTimers.get(playerId);
-      if (existingTimer) {
-        clearTimeout(existingTimer);
-      }
-
-      const timer = setTimeout(() => {
-        disconnectTimers.delete(playerId);
-
-        if (!rooms.has(roomId)) return;
-
-        const currentSocketId = room.getSocketIdByPlayerId(playerId);
-        if (currentSocketId === disconnectedSocketId) {
-          const { removedPlayer } = room.removeUser(disconnectedSocketId);
-          if (removedPlayer) {
-            io.to(`room_${roomId}`).emit('room:player_left', {
-              player: {
-                ...removedPlayer,
-                playerToken: undefined,
-              },
-              summary: room.getLobbySummary(),
-            });
-          }
-        }
-      }, 25000);
-
-      disconnectTimers.set(playerId, timer);
     });
   });
 }
