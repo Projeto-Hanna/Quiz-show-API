@@ -1,10 +1,11 @@
 import { Router, type Request, type Response } from 'express';
+import cors from 'cors';
 import { rooms } from '../state.js';
 
 export const apiRouter = Router();
 
-// Health check endpoint
-apiRouter.get('/health', (_req: Request, res: Response) => {
+apiRouter.get('/health', cors(), (_req: Request, res: Response) => {
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   res.json({
     status: 'online',
     timestamp: new Date().toISOString(),
