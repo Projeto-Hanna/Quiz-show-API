@@ -37,7 +37,7 @@ export class GameRoom {
     this.hostSocketId = hostSocketId;
     this.hostToken = randomUUID();
     this.questions = questions;
-    this.timePerQuestion = Math.max(5, Math.min(60, timePerQuestion));
+    this.timePerQuestion = Math.max(5, Math.min(300, timePerQuestion));
     this.maxPlayers = 10;
     this.status = 'LOBBY';
     this.currentQuestionIndex = 0;
@@ -161,7 +161,7 @@ export class GameRoom {
     }
     this.questions = questions;
     if (timePerQuestion !== undefined) {
-      this.timePerQuestion = Math.max(5, Math.min(60, timePerQuestion));
+      this.timePerQuestion = Math.max(5, Math.min(300, timePerQuestion));
     }
   }
 
