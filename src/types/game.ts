@@ -135,6 +135,7 @@ export interface ServerToClientEvents {
     hasMoreQuestions: boolean;
   }) => void;
   'game:finished': (data: { scoreboard: ScoreboardItem[] }) => void;
+  'game:reset_to_lobby': (data: { summary: LobbySummary }) => void;
 }
 
 export interface ClientToServerEvents {
@@ -205,6 +206,14 @@ export interface ClientToServerEvents {
   'host:end_game': (
     data: { roomId: string; hostToken: string },
     callback?: (res: { success: boolean; error?: string }) => void,
+  ) => void;
+  'host:restart_game': (
+    data: { roomId: string; hostToken: string },
+    callback?: (res: {
+      success: boolean;
+      summary?: LobbySummary;
+      error?: string;
+    }) => void,
   ) => void;
   'host:cancel_room': (
     data: { roomId: string; hostToken: string },

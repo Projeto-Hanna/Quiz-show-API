@@ -352,4 +352,21 @@ export class GameRoom {
       })),
     };
   }
+
+  public resetToLobby(): LobbySummary {
+    this.status = 'LOBBY';
+    this.currentQuestionIndex = 0;
+    this.questionStartedAt = 0;
+    this.finishedAt = 0;
+
+    for (const player of this.players.values()) {
+      player.score = 0;
+      player.answered = false;
+      player.lastAnswerCorrect = false;
+      player.lastAnswerPoints = 0;
+      player.answerTimeMs = 0;
+    }
+
+    return this.getLobbySummary();
+  }
 }

@@ -204,6 +204,25 @@ export function registerHostEvents(
     callback?.({ success: true });
   });
 
+  socket.on('host:restart_game', ({ roomId, hostToken }, callback) => {
+    const room = rooms.get(roomId);
+    if (!room || room.hostToken !== hostToken) {
+      return callback?.({
+        success: false,
+        error: 'Apenas o Host pode reiniciar a partida.',
+      });
+    }
+
+    try {
+      const summary = room.resetToLobby();
+      io.to(`room_${roomId}`).emit('game:reset_to_lobby', { summary });
+      callback?.({ success: true, summary });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erro desconhecido';
+      callback?.({ success: false, error: message });
+    }
+  });
+
   socket.on('host:cancel_room', ({ roomId, hostToken }, callback) => {
     const room = rooms.get(roomId);
     if (!room || room.hostToken !== hostToken) {
