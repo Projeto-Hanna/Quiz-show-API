@@ -29,7 +29,7 @@ export function generateRoomCode(): string {
   let code = '';
   do {
     code = '';
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 6; i++) {
       code += chars.charAt(randomInt(chars.length));
     }
   } while (rooms.has(code));
