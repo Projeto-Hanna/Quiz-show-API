@@ -11,6 +11,7 @@ export interface Player {
   playerToken?: string;
   answered: boolean;
   lastAnswerCorrect: boolean;
+  lastAnswerOptionIndex: number | null;
   lastAnswerPoints: number;
   answerTimeMs: number;
 }
@@ -72,6 +73,7 @@ export interface PlayerRoundResult {
   name: string;
   answered: boolean;
   isCorrect: boolean;
+  optionIndex: number | null;
   pointsEarned: number;
   totalScore: number;
 }
@@ -107,6 +109,7 @@ export interface StartGameResult {
 export interface CreateRoomData {
   questions: Question[];
   timePerQuestion?: number;
+  maxPlayers?: number;
 }
 
 // Socket.io Events contracts
@@ -116,6 +119,7 @@ export interface ServerToClientEvents {
     summary: LobbySummary;
   }) => void;
   'room:player_left': (data: { player: Player; summary: LobbySummary }) => void;
+  'room:kicked': (data: { reason: string }) => void;
   'room:closed': (data: { reason: string }) => void;
   'game:countdown': (data: { countdownSeconds: number }) => void;
   'game:question_started': (data: {
@@ -151,6 +155,14 @@ export interface ClientToServerEvents {
   ) => void;
   'host:rejoin_room': (
     data: { roomId: string; hostToken: string },
+    callback?: (res: {
+      success: boolean;
+      summary?: LobbySummary;
+      error?: string;
+    }) => void,
+  ) => void;
+  'host:kick_player': (
+    data: { roomId: string; hostToken: string; playerId: string },
     callback?: (res: {
       success: boolean;
       summary?: LobbySummary;

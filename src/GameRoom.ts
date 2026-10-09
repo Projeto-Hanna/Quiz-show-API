@@ -32,13 +32,14 @@ export class GameRoom {
     hostSocketId: string,
     questions: Question[] = [],
     timePerQuestion: number = 15,
+    maxPlayers: number = 10,
   ) {
     this.id = id;
     this.hostSocketId = hostSocketId;
     this.hostToken = randomUUID();
     this.questions = questions;
     this.timePerQuestion = Math.max(5, Math.min(300, timePerQuestion));
-    this.maxPlayers = 10;
+    this.maxPlayers = Math.max(1, Math.min(30, maxPlayers));
     this.status = 'LOBBY';
     this.currentQuestionIndex = 0;
     this.questionStartedAt = 0;
@@ -80,6 +81,7 @@ export class GameRoom {
       playerToken: randomUUID(),
       answered: false,
       lastAnswerCorrect: false,
+      lastAnswerOptionIndex: null,
       lastAnswerPoints: 0,
       answerTimeMs: 0,
     };
@@ -198,6 +200,7 @@ export class GameRoom {
     for (const player of this.players.values()) {
       player.answered = false;
       player.lastAnswerCorrect = false;
+      player.lastAnswerOptionIndex = null;
       player.lastAnswerPoints = 0;
       player.answerTimeMs = 0;
     }
@@ -226,15 +229,16 @@ export class GameRoom {
     const maxTimeMs = this.timePerQuestion * 1000;
     player.answered = true;
     player.answerTimeMs = elapsedMs;
+    player.lastAnswerOptionIndex = optionIndex;
 
     const currentQuestion = this.questions[this.currentQuestionIndex];
     const isCorrect = optionIndex === currentQuestion.answer;
 
     if (isCorrect) {
-      // 100 base points + up to 50 speed bonus
+      // 1000 base points + up to 500 speed bonus
       const remainingRatio = Math.max(0, (maxTimeMs - elapsedMs) / maxTimeMs);
-      const speedBonus = Math.round(50 * remainingRatio);
-      const points = 100 + speedBonus;
+      const speedBonus = Math.round(500 * remainingRatio);
+      const points = 1000 + speedBonus;
 
       player.lastAnswerCorrect = true;
       player.lastAnswerPoints = points;
@@ -267,6 +271,7 @@ export class GameRoom {
       name: p.name,
       answered: p.answered,
       isCorrect: p.lastAnswerCorrect,
+      optionIndex: p.lastAnswerOptionIndex,
       pointsEarned: p.lastAnswerPoints,
       totalScore: p.score,
     }));
@@ -363,6 +368,7 @@ export class GameRoom {
       player.score = 0;
       player.answered = false;
       player.lastAnswerCorrect = false;
+      player.lastAnswerOptionIndex = null;
       player.lastAnswerPoints = 0;
       player.answerTimeMs = 0;
     }

@@ -15,28 +15,32 @@ export function registerHostEvents(
   io: Server<ClientToServerEvents, ServerToClientEvents>,
   socket: Socket<ClientToServerEvents, ServerToClientEvents>,
 ): void {
-  socket.on('host:create_room', ({ questions, timePerQuestion }, callback) => {
-    try {
-      const validation = CreateRoomSchema.safeParse({
-        questions,
-        timePerQuestion,
-      });
-      if (!validation.success) {
-        return callback?.({
-          success: false,
-          error:
-            validation.error.issues[0]?.message ||
-            'Lista de perguntas inválida.',
+  socket.on(
+    'host:create_room',
+    ({ questions, timePerQuestion, maxPlayers }, callback) => {
+      try {
+        const validation = CreateRoomSchema.safeParse({
+          questions,
+          timePerQuestion,
+          maxPlayers,
         });
-      }
+        if (!validation.success) {
+          return callback?.({
+            success: false,
+            error:
+              validation.error.issues[0]?.message ||
+              'Lista de perguntas inválida.',
+          });
+        }
 
-      const roomId = generateRoomCode();
-      const room = new GameRoom(
-        roomId,
-        socket.id,
-        validation.data.questions,
-        validation.data.timePerQuestion,
-      );
+        const roomId = generateRoomCode();
+        const room = new GameRoom(
+          roomId,
+          socket.id,
+          validation.data.questions,
+          validation.data.timePerQuestion,
+          validation.data.maxPlayers,
+        );
       rooms.set(roomId, room);
       addSocketRoom(socket.id, roomId);
 
@@ -245,4 +249,56 @@ export function registerHostEvents(
 
     callback?.({ success: true });
   });
+
+  socket.on(
+    'host:kick_player',
+    ({ roomId, hostToken, playerId }, callback) => {
+      const room = rooms.get(roomId);
+      if (!room || room.hostToken !== hostToken) {
+        return callback?.({
+          success: false,
+          error: 'Apenas o Host pode expulsar jogadores.',
+        });
+      }
+
+      if (room.status !== 'LOBBY') {
+        return callback?.({
+          success: false,
+          error:
+            'Jogadores só podem ser removidos durante a fase de espera (Lobby).',
+        });
+      }
+
+      const found = room.getPlayerByUuid(playerId);
+      if (!found) {
+        return callback?.({
+          success: false,
+          error: 'Jogador não encontrado na sala.',
+        });
+      }
+
+      const { player, socketId } = found;
+      room.removeUser(socketId);
+      removeSocketRoom(socketId, roomId);
+
+      io.to(socketId).emit('room:kicked', {
+        reason: 'Você foi removido da sala pelo Host.',
+      });
+
+      const targetSocket = io.sockets.sockets.get(socketId);
+      if (targetSocket) {
+        targetSocket.leave(`room_${roomId}`);
+      }
+
+      io.to(`room_${roomId}`).emit('room:player_left', {
+        player,
+        summary: room.getLobbySummary(),
+      });
+
+      callback?.({
+        success: true,
+        summary: room.getLobbySummary(),
+      });
+    },
+  );
 }
