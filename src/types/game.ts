@@ -208,6 +208,8 @@ export interface ClientToServerEvents {
       summary?: LobbySummary;
       sync?: RoomSyncState;
       error?: string;
+      /** Machine-readable failure reason, so clients don't parse `error`. */
+      code?: 'KICKED';
     }) => void,
   ) => void;
   'player:leave_room': (

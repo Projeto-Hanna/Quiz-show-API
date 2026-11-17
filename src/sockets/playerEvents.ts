@@ -46,6 +46,7 @@ export function registerPlayerEvents(
         return callback?.({
           success: false,
           error: 'Você foi removido da sala pelo Host.',
+          code: 'KICKED',
         });
       }
 
