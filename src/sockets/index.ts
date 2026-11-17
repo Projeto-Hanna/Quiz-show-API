@@ -64,13 +64,13 @@ export function registerSocketHandlers(
               }
               rooms.delete(roomId);
             }
-          }, 25000);
+          }, 180000);
 
           hostDisconnectTimers.set(roomId, hostTimer);
           continue;
         }
 
-        const player = room.players.get(socket.id);
+        const player = room.markPlayerDisconnected(socket.id);
         if (!player) continue;
 
         const playerId = player.id;
@@ -81,27 +81,41 @@ export function registerSocketHandlers(
           clearTimeout(existingTimer);
         }
 
-        const timer = setTimeout(() => {
-          disconnectTimers.delete(playerId);
+        // Let the Host (and, in the lobby, the other players) know this player dropped
+        const connectionTarget =
+          room.status === 'LOBBY' ? `room_${roomId}` : room.hostSocketId;
+        io.to(connectionTarget).emit('room:player_connection', {
+          playerId,
+          connected: false,
+          summary: room.getLobbyCounts(),
+        });
 
-          if (!rooms.has(roomId)) return;
+        if (room.status === 'LOBBY') {
+          const timer = setTimeout(() => {
+            disconnectTimers.delete(playerId);
 
-          const currentSocketId = room.getSocketIdByPlayerId(playerId);
-          if (currentSocketId === disconnectedSocketId) {
-            const { removedPlayer } = room.removeUser(disconnectedSocketId);
-            if (removedPlayer) {
-              io.to(`room_${roomId}`).emit('room:player_left', {
-                player: {
-                  ...removedPlayer,
-                  playerToken: undefined,
-                },
-                summary: room.getLobbySummary(),
-              });
+            if (!rooms.has(roomId) || room.status !== 'LOBBY') return;
+
+            const currentSocketId = room.getSocketIdByPlayerId(playerId);
+            if (currentSocketId === disconnectedSocketId) {
+              const { removedPlayer } = room.removeUser(disconnectedSocketId);
+              if (removedPlayer) {
+                io.to(`room_${roomId}`).emit('room:player_left', {
+                  player: room.toLobbyPlayer(removedPlayer),
+                  summary: room.getLobbyCounts(),
+                });
+              }
             }
-          }
-        }, 25000);
+          }, 60000);
 
-        disconnectTimers.set(playerId, timer);
+          disconnectTimers.set(playerId, timer);
+        } else if (room.status === 'QUESTION') {
+          io.to(room.hostSocketId).emit('game:answer_progress', {
+            totalAnswered: room.answeredCount,
+            totalPlayers: room.getConnectedPlayerCount(),
+            allAnswered: room.areAllActivePlayersAnswered(),
+          });
+        }
       }
     });
   });

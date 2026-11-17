@@ -8,6 +8,7 @@ export interface Player {
   id: string; // UUID público
   name: string;
   score: number;
+  connected?: boolean;
   playerToken?: string;
   answered: boolean;
   lastAnswerCorrect: boolean;
@@ -28,6 +29,7 @@ export interface LobbyPlayer {
   id: string;
   name: string;
   score: number;
+  connected?: boolean;
 }
 
 export interface LobbySummary {
@@ -39,6 +41,9 @@ export interface LobbySummary {
   timePerQuestion: number;
   players: LobbyPlayer[];
 }
+
+/** Lobby summary without the player list — sent with incremental roster events. */
+export type LobbyCounts = Omit<LobbySummary, 'players'>;
 
 export interface PublicQuestion {
   index: number;
@@ -112,16 +117,41 @@ export interface CreateRoomData {
   maxPlayers?: number;
 }
 
+export interface RoomSyncState {
+  status: RoomStatus;
+  currentQuestion?: PublicQuestion | HostQuestion | null;
+  answeredCount?: number;
+  /** Server-computed remaining time for the active question (immune to client clock skew). */
+  remainingMs?: number;
+  playerAnswered?: boolean;
+  playerSelectedOption?: number | null;
+  roundResult?: RoundResult | null;
+  scoreboard?: ScoreboardItem[];
+  currentIndex: number;
+  totalQuestions: number;
+  hasMoreQuestions: boolean;
+}
+
 // Socket.io Events contracts
 export interface ServerToClientEvents {
+  // Roster events carry only the changed player plus counts; clients merge them
+  // into the full list they received when joining (or rejoining) the room.
   'room:player_joined': (data: {
-    player: Player;
-    summary: LobbySummary;
+    player: LobbyPlayer;
+    summary: LobbyCounts;
   }) => void;
-  'room:player_left': (data: { player: Player; summary: LobbySummary }) => void;
+  'room:player_left': (data: {
+    player: LobbyPlayer;
+    summary: LobbyCounts;
+  }) => void;
+  'room:player_connection': (data: {
+    playerId: string;
+    connected: boolean;
+    summary: LobbyCounts;
+  }) => void;
   'room:kicked': (data: { reason: string }) => void;
   'room:closed': (data: { reason: string }) => void;
-  'game:countdown': (data: { countdownSeconds: number }) => void;
+  'game:countdown': (data: { countdownSeconds: number; seconds: number }) => void;
   'game:question_started': (data: {
     question: PublicQuestion | HostQuestion | null;
     isHost: boolean;
@@ -158,6 +188,7 @@ export interface ClientToServerEvents {
     callback?: (res: {
       success: boolean;
       summary?: LobbySummary;
+      sync?: RoomSyncState;
       error?: string;
     }) => void,
   ) => void;
@@ -175,15 +206,26 @@ export interface ClientToServerEvents {
       success: boolean;
       player?: Player; // Pode incluir o playerToken
       summary?: LobbySummary;
+      sync?: RoomSyncState;
       error?: string;
     }) => void,
+  ) => void;
+  'player:leave_room': (
+    data: { roomId: string; playerToken?: string },
+    callback?: (res: { success: boolean }) => void,
   ) => void;
   'host:start_game': (
     data: { roomId: string; hostToken: string },
     callback?: (res: { success: boolean; error?: string }) => void,
   ) => void;
   'player:submit_answer': (
-    data: { roomId: string; playerToken: string; optionIndex: number },
+    data: {
+      roomId: string;
+      playerToken: string;
+      optionIndex: number;
+      /** Index of the question the player is answering; stale answers are rejected. */
+      questionIndex?: number;
+    },
     callback?: (res: {
       success: boolean;
       pointsEarned?: number;

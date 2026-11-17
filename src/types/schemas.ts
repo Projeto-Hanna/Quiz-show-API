@@ -33,7 +33,34 @@ export const CreateRoomSchema = z.object({
     .min(1, 'É necessário fornecer pelo menos 1 pergunta.')
     .max(100, 'O número máximo permitido de perguntas por partida é 100.'),
   timePerQuestion: z.number().int().min(10).max(300).optional().default(15),
-  maxPlayers: z.number().int().min(1).max(30).optional().default(10),
+  maxPlayers: z.number().int().min(1).max(150).optional().default(10),
+});
+
+export const HostRoomAuthSchema = z.object({
+  roomId: z.string().trim().min(1, 'Código da sala é obrigatório.'),
+  hostToken: z.string().trim().min(1, 'Token de host é obrigatório.'),
+});
+
+export const HostKickPlayerSchema = HostRoomAuthSchema.extend({
+  playerId: z.string().trim().min(1, 'ID do jogador é obrigatório.'),
+});
+
+export const PlayerJoinSchema = z.object({
+  roomId: z.string().trim().min(1, 'Código da sala é obrigatório.'),
+  playerName: z.string().trim().optional().default(''),
+  playerToken: z.string().trim().optional(),
+});
+
+export const PlayerLeaveSchema = z.object({
+  roomId: z.string().trim().min(1),
+  playerToken: z.string().trim().optional(),
+});
+
+export const PlayerSubmitAnswerSchema = z.object({
+  roomId: z.string().trim().min(1, 'Código da sala é obrigatório.'),
+  playerToken: z.string().trim().min(1, 'Token de jogador é obrigatório.'),
+  optionIndex: z.number().int().min(0).max(5),
+  questionIndex: z.number().int().min(0).optional(),
 });
 
 export type ValidatedQuestion = z.infer<typeof QuestionSchema>;

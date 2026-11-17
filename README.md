@@ -33,6 +33,12 @@ PORT=3001
 # Em desenvolvimento, o padrão é '*' caso omitido.
 # Em produção, informe uma URL ou múltiplos domínios separados por vírgula:
 CORS_ORIGIN=http://localhost:5173,https://quiz-show.app
+
+# Quantidade de proxies reversos entre o cliente e o servidor (Padrão: 1)
+# 1     -> Render, Railway, Heroku, Fly.io ou Nginx/Caddy em uma VPS
+# 2     -> CDN na frente da hospedagem (ex: Cloudflare + Render)
+# false -> servidor exposto diretamente, sem proxy (ignora X-Forwarded-For)
+TRUST_PROXY=1
 ```
 
 ---
@@ -54,12 +60,15 @@ CORS_ORIGIN=http://localhost:5173,https://quiz-show.app
 
 ## 🛡️ Segurança & Funcionalidades
 
-- **Helmet & Rate Limiting**: Proteção com headers de segurança HTTP e limite de 100 requisições a cada 15 minutos por IP.
-- **Validação com Zod**: Schemas estritos para validação de formato e limites de perguntas (`QuestionSchema`, `CreateRoomSchema`).
+- **Helmet & Rate Limiting**: Proteção com headers de segurança HTTP e limite de 1500 requisições HTTP a cada 15 minutos por IP (a rota `/health` não é contabilizada). Cada conexão WebSocket também é limitada a 30 eventos por segundo.
+- **Validação com Zod**: Schemas estritos para validação de formato, limites de perguntas e de todos os eventos Socket.IO (`QuestionSchema`, `CreateRoomSchema`, entre outros).
+- **Limite de Participantes**: Até 150 jogadores por sala (configurável pelo Host na criação; padrão 10).
 - **UUIDs Públicos**: Cada jogador recebe um UUID v4 criptográfico, mantendo os `socket.id` protegidos internamente.
 - **Auto-Rejoin & Grace Period**:
-  - Jogadores têm tolerância de 25 segundos ao desconectar (refresh / oscilação de conexão).
-  - O reingresso com o `playerId` restaura a pontuação acumulada e sincroniza o estado atual da partida.
+  - No lobby, jogadores têm tolerância de 60 segundos ao desconectar (refresh / oscilação de conexão) antes de serem removidos.
+  - Durante a partida, jogadores desconectados permanecem na sala (marcados como desconectados) e podem voltar a qualquer momento.
+  - O Host tem tolerância de 3 minutos para reconectar antes de a sala ser encerrada.
+  - O reingresso com o `playerToken` restaura a pontuação acumulada e sincroniza o estado atual da partida, incluindo o tempo restante calculado pelo servidor.
 - **Limpeza Periódica**: Salas finalizadas ou inativas por mais de 1 hora são automaticamente desalocadas da memória.
 
 ---

@@ -4,6 +4,8 @@ export const rooms = new Map<string, GameRoom>();
 export const socketToRoom = new Map<string, Set<string>>();
 export const disconnectTimers = new Map<string, NodeJS.Timeout>();
 export const hostDisconnectTimers = new Map<string, NodeJS.Timeout>();
+export const countdownTimers = new Map<string, NodeJS.Timeout>();
+export const roundTimers = new Map<string, NodeJS.Timeout>();
 
 export function addSocketRoom(socketId: string, roomId: string): void {
   const userRooms = socketToRoom.get(socketId) || new Set<string>();
